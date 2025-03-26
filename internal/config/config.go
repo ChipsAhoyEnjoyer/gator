@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 const (
@@ -33,20 +34,24 @@ func Read() (*Config, error) {
 	return c, nil
 }
 
-func (cfg *Config) SetUser() error {
-	// {
-	// 	"db_url": "postgres://example"
-	// }
-	jsonData, err := json.Marshal(&cfg)
+func (cfg *Config) SetUser(username string) error {
+	cfg.CurrentUsername = username
+	err := write(cfg)
+	if err != nil {
+		return fmt.Errorf("error setting new user: \n%v", err)
+	}
+	return nil
+}
+
+func write(cfg *Config) error {
+	jsonData, err := json.Marshal(cfg)
 	if err != nil {
 		return fmt.Errorf("error marshaling json data from Config struct: \n%v", err)
 	}
-
-	homeDir, err := os.UserHomeDir()
+	configJsonPath, err := getConfigFilePath()
 	if err != nil {
-		return fmt.Errorf("error retreiving home directory from function 'os.UserHomeDir()': \n%v", err)
+		return err
 	}
-	configJsonPath := homeDir + "/" + gatorConfigFile
 	err = os.WriteFile(configJsonPath, jsonData, 0666)
 	if err != nil {
 		return fmt.Errorf(
@@ -55,4 +60,12 @@ func (cfg *Config) SetUser() error {
 		)
 	}
 	return nil
+}
+
+func getConfigFilePath() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("error retreiving home directory from function 'os.UserHomeDir()': \n%v", err)
+	}
+	return filepath.Join(homeDir, gatorConfigFile), nil
 }

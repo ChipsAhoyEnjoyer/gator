@@ -7,15 +7,13 @@ import (
 )
 
 func main() {
-	fmt.Println("Hello World")
 	c, err := config.Read()
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(c.DBUrl)
 	fmt.Println(c.CurrentUsername)
-	c.CurrentUsername = "ChipsAhoyEnjoyer"
-	err = c.SetUser()
+	err = c.SetUser("ChipsAhoyEnjoyer")
 	if err != nil {
 		panic(err)
 	}
