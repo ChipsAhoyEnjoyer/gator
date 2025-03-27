@@ -2,25 +2,25 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/ChipsAhoyEnjoyer/gator/internal/config"
 )
 
 func main() {
-	c, err := config.Read()
+	gatorState := createStateInstance()
+	newConfig, err := config.Read()
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
-	fmt.Println(c.DBUrl)
-	fmt.Println(c.CurrentUsername)
-	err = c.SetUser("ChipsAhoyEnjoyer")
-	if err != nil {
-		panic(err)
+	gatorState.config = newConfig
+	// commandRegistry := newCommands()
+
+	cmds := os.Args[1:]
+	if len(cmds) < 2 {
+		fmt.Println("error not enough commands/arguments given")
+		os.Exit(1)
 	}
-	c, err = config.Read()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(c.DBUrl)
-	fmt.Println(c.CurrentUsername)
+
 }
