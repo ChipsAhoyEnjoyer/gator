@@ -15,12 +15,27 @@ func main() {
 		os.Exit(1)
 	}
 	gatorState.config = newConfig
-	// commandRegistry := newCommands()
-
-	cmds := os.Args[1:]
-	if len(cmds) < 2 {
-		fmt.Println("error not enough commands/arguments given")
+	commandRegistry := newCommands()
+	cmd, err := cleanInput(os.Args)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	err = commandRegistry.run(gatorState, *cmd)
+	if err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
 
+}
+
+func cleanInput(input []string) (*command, error) {
+	if len(input) < 3 {
+		return nil, fmt.Errorf("error: not enough commands/arguments given")
+	}
+	cmd := command{
+		name: input[1],
+		args: input[2:],
+	}
+	return &cmd, nil
 }
