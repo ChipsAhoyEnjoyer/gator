@@ -1,10 +1,12 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 
 	"github.com/ChipsAhoyEnjoyer/gator/internal/config"
+	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -14,8 +16,11 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	gatorState.config = newConfig
+	gatorState.cfg = newConfig
 	commandRegistry := newCommands()
+
+	db, err := sql.Open("postgres", gatorState.cfg.DBUrl)
+
 	cmd, err := cleanInput(os.Args)
 	if err != nil {
 		fmt.Println(err)

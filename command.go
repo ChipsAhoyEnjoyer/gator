@@ -39,7 +39,7 @@ func handlerLogin(s *state, cmd command) error {
 	if len(cmd.args) > 2 {
 		return fmt.Errorf("error: too many arguments given; login expects one(username) argument")
 	}
-	err := s.config.SetUser(cmd.args[0])
+	err := s.cfg.SetUser(cmd.args[0])
 	if err != nil {
 		return err
 	}
