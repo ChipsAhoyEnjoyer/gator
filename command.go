@@ -24,6 +24,8 @@ func newCommands() *commands {
 		registry: make(map[string]func(*state, command) error),
 	}
 	c.register("login", handlerLogin)
+	c.register("register", handlerRegister)
+	c.register("reset", handlerReset)
 	return &c
 }
 
@@ -44,20 +46,28 @@ func (c *commands) run(s *state, cmd command) error {
 }
 
 func handlerLogin(s *state, cmd command) error {
-	if len(cmd.args) > 2 {
+	if len(cmd.args) >= 2 {
 		return fmt.Errorf("error: too many arguments given; login expects one(username) argument")
 	}
-	err := s.cfg.SetUser(cmd.args[0])
+	username := cmd.args[0]
+	if !userExists(s, username) {
+		return fmt.Errorf("error: user not registered")
+	}
+	err := s.cfg.SetUser(username)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Now logged in as %v\n", cmd.args[0])
+	fmt.Printf("Now logged in as %v\n", username)
 	return nil
 }
 
 func handlerRegister(s *state, cmd command) error {
-	if len(cmd.args) > 2 {
+	if len(cmd.args) >= 2 {
 		return fmt.Errorf("error: too many arguments given; register expects one(username) argument")
+	}
+	username := cmd.args[0]
+	if userExists(s, username) {
+		return fmt.Errorf("error: user exists")
 	}
 	u, err := s.db.CreateUser(
 		context.Background(),
@@ -66,7 +76,7 @@ func handlerRegister(s *state, cmd command) error {
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 			Name: sql.NullString{
-				String: cmd.args[1],
+				String: username,
 				Valid:  true,
 			},
 		},
@@ -86,4 +96,27 @@ func handlerRegister(s *state, cmd command) error {
 		u.ID,
 	)
 	return nil
+}
+
+func handlerReset(s *state, cmd command) error {
+	if len(cmd.args) > 0 {
+		return fmt.Errorf("error: too many arguments given; reset expects zero argument")
+	}
+	usersDeleted, err := s.db.ResetUsers(context.Background())
+	if err != nil {
+		return fmt.Errorf("error: users table reset unsuccessful \n%v", err)
+	}
+	fmt.Printf("Deleted %v user(s)\n", usersDeleted)
+	return nil
+}
+
+func userExists(s *state, name string) bool {
+	_, err := s.db.GetUser(
+		context.Background(),
+		sql.NullString{
+			String: name,
+			Valid:  true,
+		},
+	)
+	return err == nil
 }
