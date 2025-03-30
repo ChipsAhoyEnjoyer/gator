@@ -26,7 +26,8 @@ func newCommands() *commands {
 	c.register("login", handlerLogin)
 	c.register("register", handlerRegister)
 	c.register("reset", handlerReset)
-	c.register("users", handlerGetUsers)
+	c.register("users", handlerUsers)
+	c.register("agg", handlerAgg)
 	return &c
 }
 
@@ -46,7 +47,22 @@ func (c *commands) run(s *state, cmd command) error {
 	return nil
 }
 
-func handlerGetUsers(s *state, cmd command) error {
+func handlerAgg(s *state, cmd command) error {
+	feed, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
+	if err != nil {
+		return err
+	}
+	fmt.Println(feed.Channel.Title)
+	fmt.Println(feed.Channel.Description)
+	fmt.Println(feed.Channel.Link)
+	for i := range feed.Channel.Item {
+		fmt.Printf(" - Title : %v \n", feed.Channel.Item[i].Title)
+		fmt.Printf("	Description: %v\n", feed.Channel.Item[i].Description)
+	}
+	return nil
+}
+
+func handlerUsers(s *state, cmd command) error {
 	if len(cmd.args) > 0 {
 		return fmt.Errorf("error: too many arguments given; users expects zero arguments")
 	}
