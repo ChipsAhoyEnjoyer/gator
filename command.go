@@ -26,6 +26,7 @@ func newCommands() *commands {
 	c.register("login", handlerLogin)
 	c.register("register", handlerRegister)
 	c.register("reset", handlerReset)
+	c.register("users", handlerGetUsers)
 	return &c
 }
 
@@ -40,6 +41,24 @@ func (c *commands) run(s *state, cmd command) error {
 		err := function(s, cmd)
 		if err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+func handlerGetUsers(s *state, cmd command) error {
+	if len(cmd.args) > 0 {
+		return fmt.Errorf("error: too many arguments given; users expects zero arguments")
+	}
+	users, err := s.db.GetUsers(context.Background())
+	if err != nil {
+		return fmt.Errorf("error: could not retreive users from db \n%v", err)
+	}
+	for _, user := range users {
+		if user.String == s.cfg.CurrentUsername {
+			fmt.Printf("* %v (current)\n", user.String)
+		} else {
+			fmt.Printf("* %v\n", user.String)
 		}
 	}
 	return nil
@@ -100,7 +119,7 @@ func handlerRegister(s *state, cmd command) error {
 
 func handlerReset(s *state, cmd command) error {
 	if len(cmd.args) > 0 {
-		return fmt.Errorf("error: too many arguments given; reset expects zero argument")
+		return fmt.Errorf("error: too many arguments given; reset expects zero arguments")
 	}
 	usersDeleted, err := s.db.ResetUsers(context.Background())
 	if err != nil {

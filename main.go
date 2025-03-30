@@ -40,8 +40,10 @@ func main() {
 }
 
 func cleanInput(input []string) (*command, error) {
-	if len(input) == 2 && input[1] == "reset" {
-		return &command{name: input[1]}, nil
+	if len(input) == 2 {
+		if input[1] == "reset" || input[1] == "users" {
+			return &command{name: input[1]}, nil
+		}
 	}
 	if len(input) < 3 {
 		return nil, fmt.Errorf("error: not enough commands/arguments given")
