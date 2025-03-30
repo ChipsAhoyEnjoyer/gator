@@ -43,7 +43,8 @@ func cleanInput(input []string) (*command, error) {
 	if len(input) == 2 {
 		if input[1] == "reset" ||
 			input[1] == "users" ||
-			input[1] == "agg" {
+			input[1] == "agg" ||
+			input[1] == "feeds" {
 			return &command{name: input[1]}, nil
 		}
 	}

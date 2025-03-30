@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"time"
 
@@ -29,6 +28,7 @@ func newCommands() *commands {
 	c.register("users", handlerUsers)
 	c.register("agg", handlerAgg)
 	c.register("addfeed", handlerAddFeed)
+	c.register("feeds", handlerFeeds)
 	return &c
 }
 
@@ -48,18 +48,43 @@ func (c *commands) run(s *state, cmd command) error {
 	return nil
 }
 
+func handlerFeeds(s *state, cmd command) error {
+	if len(cmd.args) > 0 {
+		return fmt.Errorf("error: cli <feed> [no args]")
+	}
+	feeds, err := s.db.GetFeeds(context.Background())
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("==============================FEED==============================")
+	for _, feed := range feeds {
+		user, err := s.db.GetUserById(context.Background(), feed.UserID)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("ID:        %v\n", feed.ID)
+		fmt.Printf("Created:   %v\n", feed.CreatedAt)
+		fmt.Printf("UpdatedAt: %v\n", feed.UpdatedAt)
+		fmt.Printf("Title:     %v\n", feed.Name)
+		fmt.Printf("Link:      %v\n", feed.Url)
+		fmt.Printf("User:    %v\n", user.Name)
+		fmt.Println()
+		fmt.Println("================================================================")
+
+	}
+	return nil
+}
+
 func handlerAddFeed(s *state, cmd command) error {
 	if len(cmd.args) != 2 {
 		return fmt.Errorf("error: addfeed 'name' 'url'")
 	}
 	name := cmd.args[0]
 	url := cmd.args[1]
-	id, err := s.db.GetUser(
+	user, err := s.db.GetUser(
 		context.Background(),
-		sql.NullString{
-			String: s.cfg.CurrentUsername,
-			Valid:  true,
-		},
+		s.cfg.CurrentUsername,
 	)
 	if err != nil {
 		return fmt.Errorf("error fetching user: \n%v", err)
@@ -72,13 +97,21 @@ func handlerAddFeed(s *state, cmd command) error {
 			UpdatedAt: time.Now(),
 			Name:      name,
 			Url:       url,
-			UserID:    uuid.NullUUID{UUID: id.ID, Valid: true},
+			UserID:    user.ID,
 		},
 	)
 	if err != nil {
 		return fmt.Errorf("error posting feed: \n%v", err)
 	}
-	fmt.Println(row)
+	fmt.Println("Feed posted successfully!")
+	fmt.Println("================================================================")
+	fmt.Printf("ID:        %v\n", row.ID)
+	fmt.Printf("Created:   %v\n", row.CreatedAt)
+	fmt.Printf("Updated:   %v\n", row.UpdatedAt)
+	fmt.Printf("Title:     %v\n", row.Name)
+	fmt.Printf("Link:      %v\n", row.Url)
+	fmt.Printf("Posted by: %v / %v\n", user.Name, row.UserID)
+	fmt.Println("================================================================")
 	return nil
 }
 
@@ -87,12 +120,15 @@ func handlerAgg(s *state, cmd command) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(feed.Channel.Title)
-	fmt.Println(feed.Channel.Description)
-	fmt.Println(feed.Channel.Link)
+	fmt.Printf("Title:       %v\n", feed.Channel.Title)
+	fmt.Printf("Description: %v\n", feed.Channel.Description)
+	fmt.Printf("Link:        %v\n\n", feed.Channel.Link)
+	fmt.Println("============================CONTENT=============================")
 	for i := range feed.Channel.Item {
 		fmt.Printf(" - Title : %v \n", feed.Channel.Item[i].Title)
-		fmt.Printf("	Description: %v\n", feed.Channel.Item[i].Description)
+		fmt.Printf(" - Description: %v\n\n", feed.Channel.Item[i].Description)
+		fmt.Println("================================================================")
+		fmt.Println()
 	}
 	return nil
 }
@@ -105,11 +141,12 @@ func handlerUsers(s *state, cmd command) error {
 	if err != nil {
 		return fmt.Errorf("error: could not retreive users from db \n%v", err)
 	}
+	fmt.Println("=============================USERS=============================")
 	for _, user := range users {
-		if user.String == s.cfg.CurrentUsername {
-			fmt.Printf("* %v (current)\n", user.String)
+		if user == s.cfg.CurrentUsername {
+			fmt.Printf("* %v (current)\n", user)
 		} else {
-			fmt.Printf("* %v\n", user.String)
+			fmt.Printf("* %v\n", user)
 		}
 	}
 	return nil
@@ -145,26 +182,22 @@ func handlerRegister(s *state, cmd command) error {
 			ID:        uuid.New(),
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
-			Name: sql.NullString{
-				String: username,
-				Valid:  true,
-			},
+			Name:      username,
 		},
 	)
 	if err != nil {
 		return fmt.Errorf("error: could not register user to database\n%v", err)
 	}
-	err = s.cfg.SetUser(u.Name.String)
+	err = s.cfg.SetUser(u.Name)
 	if err != nil {
 		return fmt.Errorf("error: user registered but not logged in\n%v", err)
 	}
-	fmt.Printf(
-		"User '%v' created \nCreated: %v \nUpdated: %v \nid: %v \n",
-		u.Name.String,
-		u.CreatedAt,
-		u.UpdatedAt,
-		u.ID,
-	)
+	fmt.Println("================================================================")
+	fmt.Printf("User '%v' created! \n", u.Name)
+	fmt.Printf("Created: %v \n", u.CreatedAt)
+	fmt.Printf("Updated: %v \n", u.UpdatedAt)
+	fmt.Printf("ID:      %v \n", u.ID)
+	fmt.Println("================================================================")
 	return nil
 }
 
@@ -183,10 +216,7 @@ func handlerReset(s *state, cmd command) error {
 func userExists(s *state, name string) bool {
 	_, err := s.db.GetUser(
 		context.Background(),
-		sql.NullString{
-			String: name,
-			Valid:  true,
-		},
+		name,
 	)
 	return err == nil
 }
