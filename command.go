@@ -28,6 +28,7 @@ func newCommands() *commands {
 	c.register("reset", handlerReset)
 	c.register("users", handlerUsers)
 	c.register("agg", handlerAgg)
+	c.register("addfeed", handlerAddFeed)
 	return &c
 }
 
@@ -44,6 +45,40 @@ func (c *commands) run(s *state, cmd command) error {
 			return err
 		}
 	}
+	return nil
+}
+
+func handlerAddFeed(s *state, cmd command) error {
+	if len(cmd.args) != 2 {
+		return fmt.Errorf("error: addfeed 'name' 'url'")
+	}
+	name := cmd.args[0]
+	url := cmd.args[1]
+	id, err := s.db.GetUser(
+		context.Background(),
+		sql.NullString{
+			String: s.cfg.CurrentUsername,
+			Valid:  true,
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("error fetching user: \n%v", err)
+	}
+	row, err := s.db.PostFeed(
+		context.Background(),
+		database.PostFeedParams{
+			ID:        uuid.New(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			Name:      name,
+			Url:       url,
+			UserID:    uuid.NullUUID{UUID: id.ID, Valid: true},
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("error posting feed: \n%v", err)
+	}
+	fmt.Println(row)
 	return nil
 }
 
