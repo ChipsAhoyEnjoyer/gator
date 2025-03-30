@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/ChipsAhoyEnjoyer/gator/internal/config"
+	"github.com/ChipsAhoyEnjoyer/gator/internal/database"
 	_ "github.com/lib/pq"
 )
 
@@ -18,8 +19,12 @@ func main() {
 	}
 	gatorState.cfg = newConfig
 	commandRegistry := newCommands()
-
 	db, err := sql.Open("postgres", gatorState.cfg.DBUrl)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	gatorState.db = database.New(db)
 
 	cmd, err := cleanInput(os.Args)
 	if err != nil {
