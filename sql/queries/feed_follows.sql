@@ -1,4 +1,4 @@
--- name: CreateFeedFollow :many
+-- name: CreateFeedFollow :one
 WITH inserted_feed_follow  AS (
     INSERT INTO feed_follows (id, created_at, updated_at, user_id, feed_id)
     VALUES (
@@ -10,9 +10,19 @@ WITH inserted_feed_follow  AS (
     ) RETURNING *
 )
 SELECT
-    inserted_feed_follow.*, feed.name, users.name
+    inserted_feed_follow.*, feed.name as feed_name, users.name as user_name
     FROM inserted_feed_follow
     INNER JOIN feed
     ON feed.id = inserted_feed_follow.feed_id
     INNER JOIN users
-    ON users.id = inserted_feed_follow.user_id;
+    ON users.id = inserted_feed_follow.user_id
+    LIMIT 1;
+
+-- name: GetFeedFollowsForUser :many
+SELECT users.name AS user_name, feed.name AS feed_name
+FROM feed_follows
+LEFT JOIN users
+ON feed_follows.user_id = users.id
+LEFT JOIN feed
+ON feed_follows.feed_id = feed.id
+WHERE feed_follows.user_id = $1;
