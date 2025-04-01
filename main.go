@@ -25,7 +25,6 @@ func main() {
 		os.Exit(1)
 	}
 	gatorState.db = database.New(db)
-
 	cmd, err := cleanInput(os.Args)
 	if err != nil {
 		fmt.Println(err)

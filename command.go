@@ -29,6 +29,7 @@ func newCommands() *commands {
 	c.register("agg", handlerAgg)
 	c.register("addfeed", handlerAddFeed)
 	c.register("feeds", handlerFeeds)
+	c.register("follow", handlerFollow)
 	return &c
 }
 
@@ -45,6 +46,14 @@ func (c *commands) run(s *state, cmd command) error {
 			return err
 		}
 	}
+	return nil
+}
+
+func handlerFollow(s *state, cmd command) error {
+	if len(cmd.args) != 1 {
+		return fmt.Errorf("usage: gator follow [link]")
+	}
+
 	return nil
 }
 
@@ -68,7 +77,7 @@ func handlerFeeds(s *state, cmd command) error {
 		fmt.Printf("UpdatedAt: %v\n", feed.UpdatedAt)
 		fmt.Printf("Title:     %v\n", feed.Name)
 		fmt.Printf("Link:      %v\n", feed.Url)
-		fmt.Printf("User:    %v\n", user.Name)
+		fmt.Printf("User:      %v\n", user.Name)
 		fmt.Println()
 		fmt.Println("================================================================")
 
