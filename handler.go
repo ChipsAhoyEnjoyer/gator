@@ -11,7 +11,7 @@ import (
 
 func handlerFollowing(s *state, cmd command) error {
 	if len(cmd.args) != 0 {
-		return fmt.Errorf("usage: cli follow")
+		return fmt.Errorf("usage: cli following")
 	}
 	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUsername)
 	if err != nil {
@@ -24,7 +24,7 @@ func handlerFollowing(s *state, cmd command) error {
 	fmt.Println("=============================FOLLOWS============================")
 	fmt.Println()
 	for _, feed := range follows {
-		fmt.Printf("Name: %v", feed.FeedName)
+		fmt.Printf("Name: %v\n", feed.FeedName)
 	}
 	fmt.Println()
 	fmt.Println("================================================================")
@@ -137,6 +137,20 @@ func handlerAddFeed(s *state, cmd command) error {
 	fmt.Printf("Link:      %v\n", row.Url)
 	fmt.Printf("Posted by: %v / %v\n", user.Name, row.UserID)
 	fmt.Println("================================================================")
+	_, err = s.db.CreateFeedFollow(
+		context.Background(),
+		database.CreateFeedFollowParams{
+			ID:        uuid.New(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			UserID:    user.ID,
+			FeedID:    row.ID,
+		},
+	)
+	if err != nil {
+		fmt.Println()
+		return fmt.Errorf("error: feed not added to user's following \n%v", err)
+	}
 	return nil
 }
 

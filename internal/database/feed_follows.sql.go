@@ -7,7 +7,6 @@ package database
 
 import (
 	"context"
-	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -31,7 +30,6 @@ SELECT
     ON feed.id = inserted_feed_follow.feed_id
     INNER JOIN users
     ON users.id = inserted_feed_follow.user_id
-    LIMIT 1
 `
 
 type CreateFeedFollowParams struct {
@@ -74,18 +72,19 @@ func (q *Queries) CreateFeedFollow(ctx context.Context, arg CreateFeedFollowPara
 }
 
 const getFeedFollowsForUser = `-- name: GetFeedFollowsForUser :many
-SELECT users.name AS user_name, feed.name AS feed_name
+SELECT feed_follows.id, users.name AS user_name, feed.name AS feed_name
 FROM feed_follows
-LEFT JOIN users
+INNER JOIN users
 ON feed_follows.user_id = users.id
-LEFT JOIN feed
+INNER JOIN feed
 ON feed_follows.feed_id = feed.id
 WHERE feed_follows.user_id = $1
 `
 
 type GetFeedFollowsForUserRow struct {
-	UserName sql.NullString
-	FeedName sql.NullString
+	ID       uuid.UUID
+	UserName string
+	FeedName string
 }
 
 func (q *Queries) GetFeedFollowsForUser(ctx context.Context, userID uuid.UUID) ([]GetFeedFollowsForUserRow, error) {
@@ -97,7 +96,7 @@ func (q *Queries) GetFeedFollowsForUser(ctx context.Context, userID uuid.UUID) (
 	var items []GetFeedFollowsForUserRow
 	for rows.Next() {
 		var i GetFeedFollowsForUserRow
-		if err := rows.Scan(&i.UserName, &i.FeedName); err != nil {
+		if err := rows.Scan(&i.ID, &i.UserName, &i.FeedName); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

@@ -15,14 +15,13 @@ SELECT
     INNER JOIN feed
     ON feed.id = inserted_feed_follow.feed_id
     INNER JOIN users
-    ON users.id = inserted_feed_follow.user_id
-    LIMIT 1;
+    ON users.id = inserted_feed_follow.user_id;
 
 -- name: GetFeedFollowsForUser :many
-SELECT users.name AS user_name, feed.name AS feed_name
+SELECT feed_follows.id, users.name AS user_name, feed.name AS feed_name
 FROM feed_follows
-LEFT JOIN users
+INNER JOIN users
 ON feed_follows.user_id = users.id
-LEFT JOIN feed
+INNER JOIN feed
 ON feed_follows.feed_id = feed.id
 WHERE feed_follows.user_id = $1;
