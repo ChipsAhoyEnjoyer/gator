@@ -9,13 +9,55 @@ import (
 	"github.com/google/uuid"
 )
 
-func handlerFollowing(s *state, cmd command) error {
+func handlerAddFeed(s *state, cmd command, user database.User) error {
+	if len(cmd.args) != 2 {
+		return fmt.Errorf("usage: cli addfeed [name] [url]")
+	}
+	name := cmd.args[0]
+	url := cmd.args[1]
+	row, err := s.db.PostFeed(
+		context.Background(),
+		database.PostFeedParams{
+			ID:        uuid.New(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			Name:      name,
+			Url:       url,
+			UserID:    user.ID,
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("error posting feed: \n%v", err)
+	}
+	fmt.Println("Feed posted successfully!")
+	fmt.Println("================================================================")
+	fmt.Printf("ID:        %v\n", row.ID)
+	fmt.Printf("Created:   %v\n", row.CreatedAt)
+	fmt.Printf("Updated:   %v\n", row.UpdatedAt)
+	fmt.Printf("Title:     %v\n", row.Name)
+	fmt.Printf("Link:      %v\n", row.Url)
+	fmt.Printf("Posted by: %v / %v\n", user.Name, row.UserID)
+	fmt.Println("================================================================")
+	_, err = s.db.CreateFeedFollow(
+		context.Background(),
+		database.CreateFeedFollowParams{
+			ID:        uuid.New(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			UserID:    user.ID,
+			FeedID:    row.ID,
+		},
+	)
+	if err != nil {
+		fmt.Println()
+		return fmt.Errorf("error: feed not added to user's following \n%v", err)
+	}
+	return nil
+}
+
+func handlerFollowing(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 0 {
 		return fmt.Errorf("usage: cli following")
-	}
-	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUsername)
-	if err != nil {
-		return err
 	}
 	follows, err := s.db.GetFeedFollowsForUser(context.Background(), user.ID)
 	if err != nil {
@@ -31,7 +73,7 @@ func handlerFollowing(s *state, cmd command) error {
 	return nil
 }
 
-func handlerFollow(s *state, cmd command) error {
+func handlerFollow(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 1 {
 		return fmt.Errorf("usage: cli follow [link]")
 	}
@@ -46,14 +88,6 @@ func handlerFollow(s *state, cmd command) error {
 		fmt.Println("use 'cli feeds' see existing feeds")
 		return err
 	}
-	user, err := s.db.GetUser(
-		context.Background(),
-		s.cfg.CurrentUsername,
-	)
-	if err != nil {
-		return err
-	}
-
 	row, err := s.db.CreateFeedFollow(
 		context.Background(),
 		database.CreateFeedFollowParams{
@@ -97,59 +131,6 @@ func handlerFeeds(s *state, cmd command) error {
 		fmt.Println()
 		fmt.Println("================================================================")
 
-	}
-	return nil
-}
-
-func handlerAddFeed(s *state, cmd command) error {
-	if len(cmd.args) != 2 {
-		return fmt.Errorf("usage: cli addfeed [name] [url]")
-	}
-	name := cmd.args[0]
-	url := cmd.args[1]
-	user, err := s.db.GetUser(
-		context.Background(),
-		s.cfg.CurrentUsername,
-	)
-	if err != nil {
-		return fmt.Errorf("error fetching user: \n%v", err)
-	}
-	row, err := s.db.PostFeed(
-		context.Background(),
-		database.PostFeedParams{
-			ID:        uuid.New(),
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-			Name:      name,
-			Url:       url,
-			UserID:    user.ID,
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("error posting feed: \n%v", err)
-	}
-	fmt.Println("Feed posted successfully!")
-	fmt.Println("================================================================")
-	fmt.Printf("ID:        %v\n", row.ID)
-	fmt.Printf("Created:   %v\n", row.CreatedAt)
-	fmt.Printf("Updated:   %v\n", row.UpdatedAt)
-	fmt.Printf("Title:     %v\n", row.Name)
-	fmt.Printf("Link:      %v\n", row.Url)
-	fmt.Printf("Posted by: %v / %v\n", user.Name, row.UserID)
-	fmt.Println("================================================================")
-	_, err = s.db.CreateFeedFollow(
-		context.Background(),
-		database.CreateFeedFollowParams{
-			ID:        uuid.New(),
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-			UserID:    user.ID,
-			FeedID:    row.ID,
-		},
-	)
-	if err != nil {
-		fmt.Println()
-		return fmt.Errorf("error: feed not added to user's following \n%v", err)
 	}
 	return nil
 }

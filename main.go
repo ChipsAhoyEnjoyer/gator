@@ -38,6 +38,7 @@ func main() {
 
 }
 
+// TODO: fix this clean input to accept commands with no args and 1+ arg(s)
 func cleanInput(input []string) (*command, error) {
 	if len(input) == 2 {
 		if input[1] == "reset" ||

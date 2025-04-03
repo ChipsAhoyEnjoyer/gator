@@ -17,15 +17,15 @@ func newCommands() *commands {
 	c := commands{
 		registry: make(map[string]func(*state, command) error),
 	}
+	c.register("addfeed", middlewareLoggedIn(handlerAddFeed))
+	c.register("following", middlewareLoggedIn(handlerFollowing))
+	c.register("follow", middlewareLoggedIn(handlerFollow))
 	c.register("login", handlerLogin)
 	c.register("register", handlerRegister)
 	c.register("reset", handlerReset)
-	c.register("users", handlerUsers)
 	c.register("agg", handlerAgg)
-	c.register("addfeed", handlerAddFeed)
+	c.register("users", handlerUsers)
 	c.register("feeds", handlerFeeds)
-	c.register("follow", handlerFollow)
-	c.register("following", handlerFollowing)
 	return &c
 }
 
