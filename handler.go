@@ -2,12 +2,77 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
 	"github.com/ChipsAhoyEnjoyer/gator/internal/database"
 	"github.com/google/uuid"
 )
+
+func userExists(s *state, name string) bool {
+	_, err := s.db.GetUser(
+		context.Background(),
+		name,
+	)
+	return err == nil
+}
+
+func scrapeFeeds(s *state) (string, error) {
+	feed, err := s.db.GetNextFeedToFetch(context.Background())
+	if err != nil {
+		return "", err
+	}
+	now := time.Now()
+	err = s.db.MarkFeedFetched(
+		context.Background(),
+		database.MarkFeedFetchedParams{
+			LastFetchedAt: sql.NullTime{
+				Time:  now,
+				Valid: true,
+			},
+			UpdatedAt: now,
+			ID:        feed.ID,
+		},
+	)
+	if err != nil {
+		return "", err
+	}
+
+	return feed.Url, nil
+}
+
+func handlerUnfollow(s *state, cmd command, user database.User) error {
+	if len(cmd.args) != 1 {
+		return fmt.Errorf("usage: cli <unfollow> 'link'")
+	}
+	url := cmd.args[0]
+	feed, err := s.db.GetFeedByURL(
+		context.Background(),
+		url,
+	)
+	if err != nil {
+		fmt.Println("feed not registered")
+		fmt.Println("use 'cli addfeed [name] [url]' to add feed")
+		fmt.Println("use 'cli feeds' see existing feeds")
+		return err
+	}
+	err = s.db.DeleteFeedFollow(
+		context.Background(),
+		database.DeleteFeedFollowParams{
+			FeedID: feed.ID,
+			UserID: user.ID,
+		},
+	)
+	// TODO: Can unfollow a source you're not even following
+	if err != nil {
+		return fmt.Errorf("error: %v not following %v", user.Name, feed.Name)
+	}
+	fmt.Println("================================================================")
+	fmt.Printf("%v unfollowed %v\n", user.Name, feed.Name)
+	fmt.Println("================================================================")
+	return nil
+}
 
 func handlerAddFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 2 {
@@ -107,9 +172,42 @@ func handlerFollow(s *state, cmd command, user database.User) error {
 	return nil
 }
 
+func handlerAgg(s *state, cmd command, user database.User) error {
+	if len(cmd.args) != 1 {
+		return fmt.Errorf("usage: cli <agg> ['refresh rate' i.e '1s'/'1m'/'1h']")
+	}
+	time_between_reqs, err := time.ParseDuration(cmd.args[0])
+	if err != nil {
+		return fmt.Errorf("usage: cli <agg> ['refresh rate' i.e '1s'/'1m'/'1h']")
+	}
+	cd := time.NewTicker(time_between_reqs)
+	fmt.Printf("Collecting feeds every %v\n", time_between_reqs)
+	for ; ; <-cd.C {
+		nextURL, err := scrapeFeeds(s)
+		if err != nil {
+			return err
+		}
+		feed, err := fetchFeed(context.Background(), nextURL)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Title:       %v\n", feed.Channel.Title)
+		fmt.Printf("Description: %v\n", feed.Channel.Description)
+		fmt.Printf("Link:        %v\n", feed.Channel.Link)
+		fmt.Println("============================CONTENT=============================")
+		for i := range feed.Channel.Item {
+			fmt.Printf(" - Title : %v \n", feed.Channel.Item[i].Title)
+			fmt.Printf(" - Description: %v\n\n", feed.Channel.Item[i].Description)
+		}
+		fmt.Println("================================================================")
+		fmt.Println()
+	}
+	return nil
+}
+
 func handlerFeeds(s *state, cmd command) error {
 	if len(cmd.args) > 0 {
-		return fmt.Errorf("usage: cli feed")
+		return fmt.Errorf("usage: cli <feed>")
 	}
 	feeds, err := s.db.GetFeeds(context.Background())
 	if err != nil {
@@ -122,33 +220,16 @@ func handlerFeeds(s *state, cmd command) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("ID:        %v\n", feed.ID)
-		fmt.Printf("Created:   %v\n", feed.CreatedAt)
-		fmt.Printf("UpdatedAt: %v\n", feed.UpdatedAt)
 		fmt.Printf("Title:     %v\n", feed.Name)
 		fmt.Printf("Link:      %v\n", feed.Url)
+		fmt.Printf("ID:        %v\n", feed.ID)
 		fmt.Printf("User:      %v\n", user.Name)
+		fmt.Printf("Created:   %v\n", feed.CreatedAt)
+		fmt.Printf("Updated: %v\n", feed.UpdatedAt)
+		fmt.Printf("Last fetched: %v\n", feed.LastFetchedAt)
 		fmt.Println()
 		fmt.Println("================================================================")
 
-	}
-	return nil
-}
-
-func handlerAgg(s *state, cmd command) error {
-	feed, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
-	if err != nil {
-		return err
-	}
-	fmt.Printf("Title:       %v\n", feed.Channel.Title)
-	fmt.Printf("Description: %v\n", feed.Channel.Description)
-	fmt.Printf("Link:        %v\n\n", feed.Channel.Link)
-	fmt.Println("============================CONTENT=============================")
-	for i := range feed.Channel.Item {
-		fmt.Printf(" - Title : %v \n", feed.Channel.Item[i].Title)
-		fmt.Printf(" - Description: %v\n\n", feed.Channel.Item[i].Description)
-		fmt.Println("================================================================")
-		fmt.Println()
 	}
 	return nil
 }
@@ -169,6 +250,8 @@ func handlerUsers(s *state, cmd command) error {
 			fmt.Printf("* %v\n", user)
 		}
 	}
+	fmt.Println()
+	fmt.Println("================================================================")
 	return nil
 }
 
@@ -231,12 +314,4 @@ func handlerReset(s *state, cmd command) error {
 	}
 	fmt.Printf("Deleted %v user(s)\n", usersDeleted)
 	return nil
-}
-
-func userExists(s *state, name string) bool {
-	_, err := s.db.GetUser(
-		context.Background(),
-		name,
-	)
-	return err == nil
 }

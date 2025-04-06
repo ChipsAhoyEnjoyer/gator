@@ -20,10 +20,11 @@ func newCommands() *commands {
 	c.register("addfeed", middlewareLoggedIn(handlerAddFeed))
 	c.register("following", middlewareLoggedIn(handlerFollowing))
 	c.register("follow", middlewareLoggedIn(handlerFollow))
+	c.register("unfollow", middlewareLoggedIn(handlerUnfollow))
+	c.register("agg", middlewareLoggedIn(handlerAgg))
 	c.register("login", handlerLogin)
 	c.register("register", handlerRegister)
 	c.register("reset", handlerReset)
-	c.register("agg", handlerAgg)
 	c.register("users", handlerUsers)
 	c.register("feeds", handlerFeeds)
 	return &c

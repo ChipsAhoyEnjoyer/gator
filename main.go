@@ -38,23 +38,12 @@ func main() {
 
 }
 
-// TODO: fix this clean input to accept commands with no args and 1+ arg(s)
 func cleanInput(input []string) (*command, error) {
-	if len(input) == 2 {
-		if input[1] == "reset" ||
-			input[1] == "users" ||
-			input[1] == "agg" ||
-			input[1] == "following" ||
-			input[1] == "feeds" {
-			return &command{name: input[1]}, nil
-		}
+	if len(input) < 2 {
+		return nil, fmt.Errorf("usage: cli <command> [args...]")
 	}
-	if len(input) < 3 {
-		return nil, fmt.Errorf("error: not enough commands/arguments given")
-	}
-	cmd := command{
-		name: input[1],
-		args: input[2:],
-	}
+	var cmd command
+	cmd.name = os.Args[1]
+	cmd.args = os.Args[2:]
 	return &cmd, nil
 }
