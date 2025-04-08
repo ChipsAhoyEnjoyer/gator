@@ -10,6 +10,10 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	xmlPubDateTimeFormat = "Mon, 02 Jan 2006 15:04:05 +0000"
+)
+
 func userExists(s *state, name string) bool {
 	_, err := s.db.GetUser(
 		context.Background(),
@@ -18,10 +22,31 @@ func userExists(s *state, name string) bool {
 	return err == nil
 }
 
-func scrapeFeeds(s *state) (string, error) {
-	feed, err := s.db.GetNextFeedToFetch(context.Background())
+func formatPostPostParams(feedID uuid.UUID, post *RSSItem) (*database.PostPostParams, error) {
+	published_date, err := time.Parse(xmlPubDateTimeFormat, post.PubDate)
 	if err != nil {
-		return "", err
+		return nil, fmt.Errorf("error: could not parse date from %v\n%v", post.Title, err)
+	}
+	return &database.PostPostParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Title:     post.Title,
+		Url:       post.Link,
+		// TODO: Nullable description
+		Description: sql.NullString{
+			String: post.Description,
+			Valid:  true,
+		},
+		PublishedAt: published_date,
+		FeedID:      feedID,
+	}, nil
+}
+
+func scrapeFeeds(s *state) error {
+	dbfeed, err := s.db.GetNextFeedToFetch(context.Background())
+	if err != nil {
+		return err
 	}
 	now := time.Now()
 	err = s.db.MarkFeedFetched(
@@ -32,14 +57,46 @@ func scrapeFeeds(s *state) (string, error) {
 				Valid: true,
 			},
 			UpdatedAt: now,
-			ID:        feed.ID,
+			ID:        dbfeed.ID,
 		},
 	)
 	if err != nil {
-		return "", err
+		return err
 	}
+	siteFeed, err := fetchFeed(context.Background(), dbfeed.Url)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Title:       %v\n", siteFeed.Channel.Title)
+	fmt.Printf("Description: %v\n", siteFeed.Channel.Description)
+	fmt.Printf("Link:        %v\n", siteFeed.Channel.Link)
+	fmt.Println("============================CONTENT=============================")
+	for i := range siteFeed.Channel.Item {
+		fmt.Printf("Saving: %v...\n", siteFeed.Channel.Item[i].Title)
+		queryLoad, err := formatPostPostParams(dbfeed.ID, &siteFeed.Channel.Item[i])
+		if err != nil {
+			return err
+		}
+		s.db.PostPost(
+			context.Background(),
+			*queryLoad,
+		)
+		fmt.Println(siteFeed.Channel.Item[i].PubDate)
+	}
+	fmt.Println("Posts saved!")
+	return nil
+	/*
+		Update your scraper to save posts. Instead of printing out the titles of the posts, save them to the database!
 
-	return feed.Url, nil
+		If you encounter an error where the post with that URL already exists, just ignore it. That will happen a lot.
+		If it's a different error, you should probably log it.
+		Make sure that you're parsing the "published at" time properly from the feeds. Sometimes they might be in a different format than you expect, so you might need to handle that.
+		You may have to manually convert the data into database/sql types.
+		Add the browse command. It should take an optional "limit" parameter. If it's not provided, default the limit to 2.
+
+		Test a bunch of RSS feeds!
+
+		Again, no CLI tests for this one. Play around with the program and make sure everything works as intended!*/
 }
 
 func handlerUnfollow(s *state, cmd command, user database.User) error {
@@ -52,9 +109,7 @@ func handlerUnfollow(s *state, cmd command, user database.User) error {
 		url,
 	)
 	if err != nil {
-		fmt.Println("feed not registered")
-		fmt.Println("use 'cli addfeed [name] [url]' to add feed")
-		fmt.Println("use 'cli feeds' see existing feeds")
+		fmt.Println("usage: cli <unfollow> 'link'")
 		return err
 	}
 	err = s.db.DeleteFeedFollow(
@@ -183,24 +238,10 @@ func handlerAgg(s *state, cmd command, user database.User) error {
 	cd := time.NewTicker(time_between_reqs)
 	fmt.Printf("Collecting feeds every %v\n", time_between_reqs)
 	for ; ; <-cd.C {
-		nextURL, err := scrapeFeeds(s)
+		err := scrapeFeeds(s)
 		if err != nil {
 			return err
 		}
-		feed, err := fetchFeed(context.Background(), nextURL)
-		if err != nil {
-			return err
-		}
-		fmt.Printf("Title:       %v\n", feed.Channel.Title)
-		fmt.Printf("Description: %v\n", feed.Channel.Description)
-		fmt.Printf("Link:        %v\n", feed.Channel.Link)
-		fmt.Println("============================CONTENT=============================")
-		for i := range feed.Channel.Item {
-			fmt.Printf(" - Title : %v \n", feed.Channel.Item[i].Title)
-			fmt.Printf(" - Description: %v\n\n", feed.Channel.Item[i].Description)
-		}
-		fmt.Println("================================================================")
-		fmt.Println()
 	}
 	return nil
 }
