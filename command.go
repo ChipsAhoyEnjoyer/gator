@@ -22,6 +22,7 @@ func newCommands() *commands {
 	c.register("follow", middlewareLoggedIn(handlerFollow))
 	c.register("unfollow", middlewareLoggedIn(handlerUnfollow))
 	c.register("agg", middlewareLoggedIn(handlerAgg))
+	c.register("browse", middlewareLoggedIn(handlerBrowse))
 	c.register("login", handlerLogin)
 	c.register("register", handlerRegister)
 	c.register("reset", handlerReset)

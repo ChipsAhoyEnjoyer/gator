@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/ChipsAhoyEnjoyer/gator/internal/database"
@@ -101,7 +103,7 @@ func scrapeFeeds(s *state) error {
 
 func handlerUnfollow(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 1 {
-		return fmt.Errorf("usage: cli <unfollow> 'link'")
+		return fmt.Errorf("usage: cli unfollow '<link>'")
 	}
 	url := cmd.args[0]
 	feed, err := s.db.GetFeedByURL(
@@ -109,7 +111,7 @@ func handlerUnfollow(s *state, cmd command, user database.User) error {
 		url,
 	)
 	if err != nil {
-		fmt.Println("usage: cli <unfollow> 'link'")
+		fmt.Println("usage: cli unfollow '<link>'")
 		return err
 	}
 	err = s.db.DeleteFeedFollow(
@@ -129,9 +131,38 @@ func handlerUnfollow(s *state, cmd command, user database.User) error {
 	return nil
 }
 
+func handlerBrowse(s *state, cmd command, user database.User) error {
+	limit := 2
+	err := errors.New("")
+	if len(cmd.args) > 1 {
+		return fmt.Errorf("usage: cli browse [limit (2 if no limit given)]")
+	} else if len(cmd.args) == 1 {
+		limit, err = strconv.Atoi(cmd.args[0])
+		if err != nil {
+			return fmt.Errorf("usage: cli browse [limit (2 if no limit given)]")
+		}
+	}
+	posts, err := s.db.GetPostsForUser(
+		context.Background(),
+		database.GetPostsForUserParams{
+			UserID: user.ID,
+			Limit:  int32(limit),
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("error: could not retreive posts \n%v", err)
+	}
+	for i := range posts {
+		fmt.Printf("Post: %v\n", posts[i].Title)
+		fmt.Printf("Description: %v\n", posts[i].Description.String)
+		fmt.Printf("Link: %v\n", posts[i].Url)
+	}
+	return nil
+}
+
 func handlerAddFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 2 {
-		return fmt.Errorf("usage: cli addfeed [name] [url]")
+		return fmt.Errorf("usage: cli addfeed <name> <url>")
 	}
 	name := cmd.args[0]
 	url := cmd.args[1]
@@ -195,7 +226,7 @@ func handlerFollowing(s *state, cmd command, user database.User) error {
 
 func handlerFollow(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 1 {
-		return fmt.Errorf("usage: cli follow [link]")
+		return fmt.Errorf("usage: cli follow '<link>'")
 	}
 	url := cmd.args[0]
 	feed, err := s.db.GetFeedByURL(
@@ -204,7 +235,7 @@ func handlerFollow(s *state, cmd command, user database.User) error {
 	)
 	if err != nil {
 		fmt.Println("feed not registered")
-		fmt.Println("use 'cli addfeed [name] [url]' to add feed")
+		fmt.Println("use 'cli addfeed <name> <url>' to add feed")
 		fmt.Println("use 'cli feeds' see existing feeds")
 		return err
 	}
@@ -229,11 +260,11 @@ func handlerFollow(s *state, cmd command, user database.User) error {
 
 func handlerAgg(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 1 {
-		return fmt.Errorf("usage: cli <agg> ['refresh rate' i.e '1s'/'1m'/'1h']")
+		return fmt.Errorf("usage: cli <agg> '<refresh rate i.e '1s'/'1m'/'1h'>")
 	}
 	time_between_reqs, err := time.ParseDuration(cmd.args[0])
 	if err != nil {
-		return fmt.Errorf("usage: cli <agg> ['refresh rate' i.e '1s'/'1m'/'1h']")
+		return fmt.Errorf("usage: cli <agg> '<refresh rate i.e '1s'/'1m'/'1h'>'")
 	}
 	cd := time.NewTicker(time_between_reqs)
 	fmt.Printf("Collecting feeds every %v\n", time_between_reqs)
@@ -248,7 +279,7 @@ func handlerAgg(s *state, cmd command, user database.User) error {
 
 func handlerFeeds(s *state, cmd command) error {
 	if len(cmd.args) > 0 {
-		return fmt.Errorf("usage: cli <feed>")
+		return fmt.Errorf("usage: cli feeds")
 	}
 	feeds, err := s.db.GetFeeds(context.Background())
 	if err != nil {
@@ -277,7 +308,7 @@ func handlerFeeds(s *state, cmd command) error {
 
 func handlerUsers(s *state, cmd command) error {
 	if len(cmd.args) > 0 {
-		return fmt.Errorf("error: too many arguments given; users expects zero arguments")
+		return fmt.Errorf("usage: cli users")
 	}
 	users, err := s.db.GetUsers(context.Background())
 	if err != nil {
@@ -298,7 +329,7 @@ func handlerUsers(s *state, cmd command) error {
 
 func handlerLogin(s *state, cmd command) error {
 	if len(cmd.args) != 1 {
-		return fmt.Errorf("usage: cli [username]")
+		return fmt.Errorf("usage: cli login '<username>'")
 	}
 	username := cmd.args[0]
 	if !userExists(s, username) {
@@ -314,7 +345,7 @@ func handlerLogin(s *state, cmd command) error {
 
 func handlerRegister(s *state, cmd command) error {
 	if len(cmd.args) != 1 {
-		return fmt.Errorf("usage: cli [username]")
+		return fmt.Errorf("usage: cli register '<username>'")
 	}
 	username := cmd.args[0]
 	if userExists(s, username) {
@@ -347,7 +378,7 @@ func handlerRegister(s *state, cmd command) error {
 
 func handlerReset(s *state, cmd command) error {
 	if len(cmd.args) > 0 {
-		return fmt.Errorf("error: too many arguments given; reset expects zero arguments")
+		return fmt.Errorf("usage: cli reset")
 	}
 	usersDeleted, err := s.db.ResetUsers(context.Background())
 	if err != nil {
