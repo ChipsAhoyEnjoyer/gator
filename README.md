@@ -23,7 +23,9 @@ CREATE DATABASE gator;
 ```
 - Connect to the new db
 
-    `\c gator`
+```
+\c gator
+```
 
 - Migrate through all of the following:
 
@@ -86,7 +88,7 @@ CREATE TABLE posts(
 
 2. Verify the installation:
 ```terminal
-gator --version
+gator version
 ```
 This should display the installed version of Gator.
 

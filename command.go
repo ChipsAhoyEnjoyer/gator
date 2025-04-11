@@ -28,6 +28,8 @@ func newCommands() *commands {
 	c.register("reset", handlerReset)
 	c.register("users", handlerUsers)
 	c.register("feeds", handlerFeeds)
+	c.register("help", handlerHelp)
+	c.register("version", handlerVersion)
 	return &c
 }
 

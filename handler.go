@@ -127,7 +127,7 @@ func scrapeFeeds(s *state) error {
 
 func handlerUnfollow(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 1 {
-		return fmt.Errorf("usage: cli unfollow '<link>'")
+		return fmt.Errorf("usage: gator unfollow '<link>'")
 	}
 	url := cmd.args[0]
 	feed, err := s.db.GetFeedByURL(
@@ -135,7 +135,7 @@ func handlerUnfollow(s *state, cmd command, user database.User) error {
 		url,
 	)
 	if err != nil {
-		fmt.Println("usage: cli unfollow '<link>'")
+		fmt.Println("usage: gator unfollow '<link>'")
 		return err
 	}
 	err = s.db.DeleteFeedFollow(
@@ -159,11 +159,11 @@ func handlerBrowse(s *state, cmd command, user database.User) error {
 	limit := 2
 	err := errors.New("")
 	if len(cmd.args) > 1 {
-		return fmt.Errorf("usage: cli browse [limit (2 if no limit given)]")
+		return fmt.Errorf("usage: gator browse [limit (2 if no limit given)]")
 	} else if len(cmd.args) == 1 {
 		limit, err = strconv.Atoi(cmd.args[0])
 		if err != nil {
-			return fmt.Errorf("usage: cli browse [limit (2 if no limit given)]")
+			return fmt.Errorf("usage: gator browse [limit (2 if no limit given)]")
 		}
 	}
 	posts, err := s.db.GetPostsForUser(
@@ -186,7 +186,7 @@ func handlerBrowse(s *state, cmd command, user database.User) error {
 
 func handlerAddFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 2 {
-		return fmt.Errorf("usage: cli addfeed <name> <url>")
+		return fmt.Errorf("usage: gator addfeed <name> <url>")
 	}
 	name := cmd.args[0]
 	url := cmd.args[1]
@@ -232,7 +232,7 @@ func handlerAddFeed(s *state, cmd command, user database.User) error {
 
 func handlerFollowing(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 0 {
-		return fmt.Errorf("usage: cli following")
+		return fmt.Errorf("usage: gator following")
 	}
 	follows, err := s.db.GetFeedFollowsForUser(context.Background(), user.ID)
 	if err != nil {
@@ -250,7 +250,7 @@ func handlerFollowing(s *state, cmd command, user database.User) error {
 
 func handlerFollow(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 1 {
-		return fmt.Errorf("usage: cli follow '<link>'")
+		return fmt.Errorf("usage: gator follow '<link>'")
 	}
 	url := cmd.args[0]
 	feed, err := s.db.GetFeedByURL(
@@ -259,8 +259,8 @@ func handlerFollow(s *state, cmd command, user database.User) error {
 	)
 	if err != nil {
 		fmt.Println("feed not registered")
-		fmt.Println("use 'cli addfeed <name> <url>' to add feed")
-		fmt.Println("use 'cli feeds' see existing feeds")
+		fmt.Println("use 'gator addfeed <name> <url>' to add feed")
+		fmt.Println("use 'gator feeds' see existing feeds")
 		return err
 	}
 	row, err := s.db.CreateFeedFollow(
@@ -284,11 +284,11 @@ func handlerFollow(s *state, cmd command, user database.User) error {
 
 func handlerAgg(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 1 {
-		return fmt.Errorf("usage: cli <agg> '<refresh rate i.e '1s'/'1m'/'1h'>")
+		return fmt.Errorf("usage: gator <agg> '<refresh rate i.e '1s'/'1m'/'1h'>")
 	}
 	time_between_reqs, err := time.ParseDuration(cmd.args[0])
 	if err != nil {
-		return fmt.Errorf("usage: cli <agg> '<refresh rate i.e '1s'/'1m'/'1h'>'")
+		return fmt.Errorf("usage: gator <agg> '<refresh rate i.e '1s'/'1m'/'1h'>'")
 	}
 	cd := time.NewTicker(time_between_reqs)
 	fmt.Printf("Collecting feeds every %v\n", time_between_reqs)
@@ -303,7 +303,7 @@ func handlerAgg(s *state, cmd command, user database.User) error {
 
 func handlerFeeds(s *state, cmd command) error {
 	if len(cmd.args) > 0 {
-		return fmt.Errorf("usage: cli feeds")
+		return fmt.Errorf("usage: gator feeds")
 	}
 	feeds, err := s.db.GetFeeds(context.Background())
 	if err != nil {
@@ -332,7 +332,7 @@ func handlerFeeds(s *state, cmd command) error {
 
 func handlerUsers(s *state, cmd command) error {
 	if len(cmd.args) > 0 {
-		return fmt.Errorf("usage: cli users")
+		return fmt.Errorf("usage: gator users")
 	}
 	users, err := s.db.GetUsers(context.Background())
 	if err != nil {
@@ -353,7 +353,7 @@ func handlerUsers(s *state, cmd command) error {
 
 func handlerLogin(s *state, cmd command) error {
 	if len(cmd.args) != 1 {
-		return fmt.Errorf("usage: cli login '<username>'")
+		return fmt.Errorf("usage: gator login '<username>'")
 	}
 	username := cmd.args[0]
 	if !userExists(s, username) {
@@ -369,7 +369,7 @@ func handlerLogin(s *state, cmd command) error {
 
 func handlerRegister(s *state, cmd command) error {
 	if len(cmd.args) != 1 {
-		return fmt.Errorf("usage: cli register '<username>'")
+		return fmt.Errorf("usage: gator register '<username>'")
 	}
 	username := cmd.args[0]
 	if userExists(s, username) {
@@ -402,7 +402,7 @@ func handlerRegister(s *state, cmd command) error {
 
 func handlerReset(s *state, cmd command) error {
 	if len(cmd.args) > 0 {
-		return fmt.Errorf("usage: cli reset")
+		return fmt.Errorf("usage: gator reset")
 	}
 	usersDeleted, err := s.db.ResetUsers(context.Background())
 	if err != nil {
@@ -410,4 +410,26 @@ func handlerReset(s *state, cmd command) error {
 	}
 	fmt.Printf("Deleted %v user(s)\n", usersDeleted)
 	return nil
+}
+
+func handlerVersion(s *state, cmd command) error {
+	fmt.Println("gator v0.1")
+	return nil
+}
+func handlerHelp(s *state, cmd command) error {
+	fmt.Println("Available commands:")
+	fmt.Println("  gator register '<username>' - Register a new user")
+	fmt.Println("  gator login '<username>' - Log in as an existing user")
+	fmt.Println("  gator addfeed <name> <url> - Add a new feed")
+	fmt.Println("  gator follow '<link>' - Follow an existing feed")
+	fmt.Println("  gator unfollow '<link>' - Unfollow a feed")
+	fmt.Println("  gator browse [limit] - Browse posts with an optional limit")
+	fmt.Println("  gator feeds - List all feeds")
+	fmt.Println("  gator following - List feeds you are following")
+	fmt.Println("  gator users - List all users")
+	fmt.Println("  gator reset - Delete all users, posts and feeds")
+	fmt.Println("  gator version - Show the version of the application")
+	fmt.Println("  gator help - Show this help message")
+	return nil
+
 }
