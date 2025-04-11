@@ -24,10 +24,10 @@ WITH inserted_feed_follow  AS (
     ) RETURNING id, created_at, updated_at, user_id, feed_id
 )
 SELECT
-    inserted_feed_follow.id, inserted_feed_follow.created_at, inserted_feed_follow.updated_at, inserted_feed_follow.user_id, inserted_feed_follow.feed_id, feed.name as feed_name, users.name as user_name
+    inserted_feed_follow.id, inserted_feed_follow.created_at, inserted_feed_follow.updated_at, inserted_feed_follow.user_id, inserted_feed_follow.feed_id, feeds.name as feed_name, users.name as user_name
     FROM inserted_feed_follow
-    INNER JOIN feed
-    ON feed.id = inserted_feed_follow.feed_id
+    INNER JOIN feeds
+    ON feeds.id = inserted_feed_follow.feed_id
     INNER JOIN users
     ON users.id = inserted_feed_follow.user_id
 `
@@ -87,12 +87,12 @@ func (q *Queries) DeleteFeedFollow(ctx context.Context, arg DeleteFeedFollowPara
 }
 
 const getFeedFollowsForUser = `-- name: GetFeedFollowsForUser :many
-SELECT feed_follows.id, users.name AS user_name, feed.name AS feed_name
+SELECT feed_follows.id, users.name AS user_name, feeds.name AS feed_name
 FROM feed_follows
 INNER JOIN users
 ON feed_follows.user_id = users.id
-INNER JOIN feed
-ON feed_follows.feed_id = feed.id
+INNER JOIN feeds
+ON feed_follows.feed_id = feeds.id
 WHERE feed_follows.user_id = $1
 `
 

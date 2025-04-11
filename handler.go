@@ -286,7 +286,7 @@ func handlerFeeds(s *state, cmd command) error {
 		return err
 	}
 
-	fmt.Println("==============================FEED==============================")
+	fmt.Println("==============================FEEDS=============================")
 	for _, feed := range feeds {
 		user, err := s.db.GetUserById(context.Background(), feed.UserID)
 		if err != nil {

@@ -10,20 +10,20 @@ WITH inserted_feed_follow  AS (
     ) RETURNING *
 )
 SELECT
-    inserted_feed_follow.*, feed.name as feed_name, users.name as user_name
+    inserted_feed_follow.*, feeds.name as feed_name, users.name as user_name
     FROM inserted_feed_follow
-    INNER JOIN feed
-    ON feed.id = inserted_feed_follow.feed_id
+    INNER JOIN feeds
+    ON feeds.id = inserted_feed_follow.feed_id
     INNER JOIN users
     ON users.id = inserted_feed_follow.user_id;
 
 -- name: GetFeedFollowsForUser :many
-SELECT feed_follows.id, users.name AS user_name, feed.name AS feed_name
+SELECT feed_follows.id, users.name AS user_name, feeds.name AS feed_name
 FROM feed_follows
 INNER JOIN users
 ON feed_follows.user_id = users.id
-INNER JOIN feed
-ON feed_follows.feed_id = feed.id
+INNER JOIN feeds
+ON feed_follows.feed_id = feeds.id
 WHERE feed_follows.user_id = $1;
 
 -- name: DeleteFeedFollow :exec

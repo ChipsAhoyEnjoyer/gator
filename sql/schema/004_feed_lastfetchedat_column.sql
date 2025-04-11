@@ -1,7 +1,7 @@
 -- +goose Up
-ALTER TABLE feed
+ALTER TABLE feeds
 ADD COLUMN last_fetched_at TIMESTAMP;
 
 -- +goose Down
-ALTER TABLE feed
-DROP COLUMN last_fetched_at TIMESTAMP;
+ALTER TABLE feeds
+DROP COLUMN last_fetched_at;
