@@ -104,16 +104,75 @@ This should display the installed version of Gator.
     }
 ```
 - *Make sure to replace "username:password" with your postgress username and password*
-5. 
 
-
-## 🛠️ Setup 🛠️
-
-*Content coming soon.*
-
-
+<!-- ...existing code... -->
 
 ## 🚀 Usage 🚀
 
-*Content coming soon.*
+Gator CLI provides the following commands:
+
+- **register** - Create a new user
+  ```terminal
+  gator register '<username>'
+  ```
+
+- **login** - Log in as an existing user
+  ```terminal
+  gator login '<username>'
+  ```
+
+- **addfeed** - Add a new RSS feed to the database
+  ```terminal
+  gator addfeed <name> <url>
+  ```
+
+- **follow** - Follow an existing feed
+  ```terminal
+  gator follow '<link>'
+  ```
+
+- **unfollow** - Unfollow a feed you're currently following
+  ```terminal
+  gator unfollow '<link>'
+  ```
+
+- **browse** - Browse posts from feeds you follow (defaults to 2 posts)
+  ```terminal
+  gator browse [limit]
+  ```
+
+- **feeds** - List all available feeds in the database
+  ```terminal
+  gator feeds
+  ```
+
+- **following** - List all feeds you are currently following
+  ```terminal
+  gator following
+  ```
+
+- **users** - List all registered users
+  ```terminal
+  gator users
+  ```
+
+- **agg** - Aggregate/scrape feeds on a schedule. Refresh-rate can be '1s', '1m', '1h', etc.
+  ```terminal
+  gator agg '<refresh-rate>'
+  ```
+
+- **reset** - Delete all users, posts and feeds
+  ```terminal
+  gator reset
+  ```
+
+- **version** - Display the current version of Gator
+  ```terminal
+  gator version
+  ```
+
+- **help** - Show all available commands
+  ```terminal
+  gator help
+  ```
 

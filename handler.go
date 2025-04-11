@@ -12,10 +12,6 @@ import (
 	"github.com/google/uuid"
 )
 
-const (
-	xmlPubDateTimeFormat = "Mon, 02 Jan 2006 15:04:05 +0000"
-)
-
 // Common RSS date formats
 var dateFormats = []string{
 	"Mon, 02 Jan 2006 15:04:05 +0000",
@@ -40,7 +36,6 @@ func formatPostPostParams(feedID uuid.UUID, post *RSSItem) (*database.PostPostPa
 	var published_date time.Time
 	var err error
 
-	// Try all date formats until one works
 	for _, format := range dateFormats {
 		published_date, err = time.Parse(format, post.PubDate)
 		if err == nil {
@@ -111,7 +106,6 @@ func scrapeFeeds(s *state) error {
 		)
 
 		if err != nil {
-			// Check if this is a duplicate URL error (this specific check depends on your database)
 			if err.Error() == "pq: duplicate key value violates unique constraint" {
 				fmt.Printf("Post already exists: %v\n", siteFeed.Channel.Item[i].Title)
 			} else {
@@ -159,11 +153,11 @@ func handlerBrowse(s *state, cmd command, user database.User) error {
 	limit := 2
 	err := errors.New("")
 	if len(cmd.args) > 1 {
-		return fmt.Errorf("usage: gator browse [limit (2 if no limit given)]")
+		return fmt.Errorf("usage: gator browse [limit]")
 	} else if len(cmd.args) == 1 {
 		limit, err = strconv.Atoi(cmd.args[0])
 		if err != nil {
-			return fmt.Errorf("usage: gator browse [limit (2 if no limit given)]")
+			return fmt.Errorf("usage: gator browse [limit]")
 		}
 	}
 	posts, err := s.db.GetPostsForUser(
@@ -177,9 +171,10 @@ func handlerBrowse(s *state, cmd command, user database.User) error {
 		return fmt.Errorf("error: could not retreive posts \n%v", err)
 	}
 	for i := range posts {
-		fmt.Printf("Post: %v\n", posts[i].Title)
-		fmt.Printf("Description: %v\n", posts[i].Description.String)
-		fmt.Printf("Link: %v\n", posts[i].Url)
+		fmt.Printf("Post: %v\n\n", posts[i].Title)
+		fmt.Printf("Link: %v\n\n", posts[i].Url)
+		fmt.Printf("Description: %v\n\n", posts[i].Description.String)
+		fmt.Println("================================================================")
 	}
 	return nil
 }
@@ -284,7 +279,7 @@ func handlerFollow(s *state, cmd command, user database.User) error {
 
 func handlerAgg(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 1 {
-		return fmt.Errorf("usage: gator <agg> '<refresh rate i.e '1s'/'1m'/'1h'>")
+		return fmt.Errorf("usage: gator <agg> '<refresh rate>'")
 	}
 	time_between_reqs, err := time.ParseDuration(cmd.args[0])
 	if err != nil {
@@ -420,10 +415,10 @@ func handlerHelp(s *state, cmd command) error {
 	fmt.Println("Available commands:")
 	fmt.Println("  gator register '<username>' - Register a new user")
 	fmt.Println("  gator login '<username>' - Log in as an existing user")
-	fmt.Println("  gator addfeed <name> <url> - Add a new feed")
+	fmt.Println("  gator addfeed '<name>' '<url>' - Add a new feed")
 	fmt.Println("  gator follow '<link>' - Follow an existing feed")
 	fmt.Println("  gator unfollow '<link>' - Unfollow a feed")
-	fmt.Println("  gator browse [limit] - Browse posts with an optional limit")
+	fmt.Println("  gator browse [limit] - Browse posts with an optional limit (defaults to 2)")
 	fmt.Println("  gator feeds - List all feeds")
 	fmt.Println("  gator following - List feeds you are following")
 	fmt.Println("  gator users - List all users")
