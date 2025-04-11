@@ -16,6 +16,18 @@ const (
 	xmlPubDateTimeFormat = "Mon, 02 Jan 2006 15:04:05 +0000"
 )
 
+// Common RSS date formats
+var dateFormats = []string{
+	"Mon, 02 Jan 2006 15:04:05 +0000",
+	"Mon, 02 Jan 2006 15:04:05 MST",
+	"Mon, 02 Jan 2006 15:04:05 -0700",
+	"2006-01-02T15:04:05Z",
+	"2006-01-02T15:04:05-07:00",
+	"2006-01-02 15:04:05 -0700",
+	"2006-01-02 15:04:05",
+	"02 Jan 2006 15:04:05 MST",
+}
+
 func userExists(s *state, name string) bool {
 	_, err := s.db.GetUser(
 		context.Background(),
@@ -25,17 +37,29 @@ func userExists(s *state, name string) bool {
 }
 
 func formatPostPostParams(feedID uuid.UUID, post *RSSItem) (*database.PostPostParams, error) {
-	published_date, err := time.Parse(xmlPubDateTimeFormat, post.PubDate)
-	if err != nil {
-		return nil, fmt.Errorf("error: could not parse date from %v\n%v", post.Title, err)
+	var published_date time.Time
+	var err error
+
+	// Try all date formats until one works
+	for _, format := range dateFormats {
+		published_date, err = time.Parse(format, post.PubDate)
+		if err == nil {
+			break
+		}
 	}
+
+	// If all formats failed, use current time
+	if err != nil {
+		fmt.Printf("Warning: could not parse date from %v (%s), using current time\n", post.Title, post.PubDate)
+		published_date = time.Now()
+	}
+
 	return &database.PostPostParams{
 		ID:        uuid.New(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 		Title:     post.Title,
 		Url:       post.Link,
-		// TODO: Nullable description
 		Description: sql.NullString{
 			String: post.Description,
 			Valid:  true,
@@ -73,32 +97,32 @@ func scrapeFeeds(s *state) error {
 	fmt.Printf("Description: %v\n", siteFeed.Channel.Description)
 	fmt.Printf("Link:        %v\n", siteFeed.Channel.Link)
 	fmt.Println("============================CONTENT=============================")
+
 	for i := range siteFeed.Channel.Item {
 		fmt.Printf("Saving: %v...\n", siteFeed.Channel.Item[i].Title)
 		queryLoad, err := formatPostPostParams(dbfeed.ID, &siteFeed.Channel.Item[i])
 		if err != nil {
 			return err
 		}
-		s.db.PostPost(
+
+		_, err = s.db.PostPost(
 			context.Background(),
 			*queryLoad,
 		)
-		fmt.Println(siteFeed.Channel.Item[i].PubDate)
+
+		if err != nil {
+			// Check if this is a duplicate URL error (this specific check depends on your database)
+			if err.Error() == "pq: duplicate key value violates unique constraint" {
+				fmt.Printf("Post already exists: %v\n", siteFeed.Channel.Item[i].Title)
+			} else {
+				fmt.Printf("Error saving post: %v - %v\n", siteFeed.Channel.Item[i].Title, err)
+			}
+		} else {
+			fmt.Printf("Saved: %v (%v)\n", siteFeed.Channel.Item[i].Title, siteFeed.Channel.Item[i].PubDate)
+		}
 	}
 	fmt.Println("Posts saved!")
 	return nil
-	/*
-		Update your scraper to save posts. Instead of printing out the titles of the posts, save them to the database!
-
-		If you encounter an error where the post with that URL already exists, just ignore it. That will happen a lot.
-		If it's a different error, you should probably log it.
-		Make sure that you're parsing the "published at" time properly from the feeds. Sometimes they might be in a different format than you expect, so you might need to handle that.
-		You may have to manually convert the data into database/sql types.
-		Add the browse command. It should take an optional "limit" parameter. If it's not provided, default the limit to 2.
-
-		Test a bunch of RSS feeds!
-
-		Again, no CLI tests for this one. Play around with the program and make sure everything works as intended!*/
 }
 
 func handlerUnfollow(s *state, cmd command, user database.User) error {
